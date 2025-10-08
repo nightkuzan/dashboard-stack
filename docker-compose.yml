@@ -1,0 +1,75 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: dashboard-postgres
+    environment:
+      POSTGRES_DB: dashboard
+      POSTGRES_USER: dashboard
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - dashboard-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dashboard"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Strapi Backend
+  backend:
+    build:
+      context: ../dashboard-backend
+      dockerfile: Dockerfile
+    container_name: dashboard-backend
+    environment:
+      HOST: 0.0.0.0
+      PORT: 1337
+      APP_KEYS: "strapi-app-key-1,strapi-app-key-2"
+      API_TOKEN_SALT: "api-token-salt"
+      ADMIN_JWT_SECRET: "admin-jwt-secret"
+      TRANSFER_TOKEN_SALT: "transfer-token-salt"
+      JWT_SECRET: "jwt-secret"
+      ENCRYPTION_KEY: "encryption-key"
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: dashboard
+      DATABASE_USERNAME: dashboard
+      DATABASE_PASSWORD: 123456
+      DATABASE_SSL: false
+    ports:
+      - "1337:1337"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - dashboard-network
+    volumes:
+      - backend_uploads:/app/public/uploads
+
+  # Vue.js Frontend
+  frontend:
+    build:
+      context: ../dashboard-client
+      dockerfile: Dockerfile
+    container_name: dashboard-frontend
+    environment:
+      VITE_APP_BASEURL: http://backend:1337
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - dashboard-network
+
+volumes:
+  postgres_data:
+  backend_uploads:
+
+networks:
+  dashboard-network:
+    driver: bridge
