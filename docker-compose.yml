@@ -56,9 +56,9 @@ services:
     build:
       context: ../dashboard-client
       dockerfile: Dockerfile
+      args:
+        VITE_APP_BASEURL: http://localhost:1337
     container_name: dashboard-frontend
-    environment:
-      VITE_APP_BASEURL: http://backend:1337
     ports:
       - "3000:80"
     depends_on:
